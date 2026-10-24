@@ -1,11 +1,13 @@
 import Database from 'better-sqlite3';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { seedDatabase } from './seed-data.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const dataDir = process.env.SOLAR_DATA_DIR || path.resolve(here, '../../data');
+const dataDir = process.env.SOLAR_DATA_DIR
+  || (process.env.VERCEL ? path.join(os.tmpdir(), 'sunnova-solar') : path.resolve(here, '../../data'));
 fs.mkdirSync(dataDir, { recursive: true });
 
 export function createDatabase(file = path.join(dataDir, 'solar.db')) {

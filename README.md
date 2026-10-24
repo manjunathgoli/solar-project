@@ -10,7 +10,7 @@ A full-stack solar installation and product-store demo with an AI assistant. The
 
 ## Prerequisites
 
-- Node.js 22 or newer and npm (the configured `better-sqlite3` release requires Node 22+).
+- Node.js 22.x and npm (both Vercel services are pinned to Node 22).
 - A Gemini API key only if you want live chatbot responses. Create one at [Google AI Studio](https://aistudio.google.com/apikey).
 
 ## Setup and run
@@ -23,20 +23,23 @@ A full-stack solar installation and product-store demo with an AI assistant. The
 
 The frontend is at [http://localhost:5173](http://localhost:5173); the API is at [http://localhost:5000](http://localhost:5000). The Vite development server proxies `/api` requests to Express. Without an API key, the site still works and the chatbot gives a friendly configuration message.
 
-## Deploy (Vercel frontend + Render API)
+## Deploy (Vercel multi-service project)
 
-The frontend and API deploy separately so the SQLite database can live on persistent storage. Do not deploy the Express server or its SQLite file as a Vercel function: Vercel function filesystems are not durable.
+The root `vercel.json` deploys two services together under one Vercel project and domain:
 
-1. Push the project to a Git provider and import the repository into Vercel.
-2. In Vercel, set **Root Directory** to `client` and enable including files from outside that directory if prompted. The `client/vercel.json` file configures the Vite build, static output, and React Router fallback.
-3. Create the Render API from the root `render.yaml` blueprint. The blueprint uses the `server` directory and mounts a persistent disk at `server/data`; keep this disk attached to retain orders, quotes, contacts, and inventory between deploys. A Render plan that supports persistent disks is required.
-4. In the Render service environment, set `GEMINI_API_KEY` to a valid secret and `CLIENT_URL` to the exact deployed Vercel origin, such as `https://your-project.vercel.app` (no trailing slash). For previews, add the exact preview origins as a comma-separated list.
-5. In Vercel project environment variables, set `VITE_API_URL` to the Render service origin, such as `https://sunnova-api.onrender.com` (no trailing slash). Set it for Production and Preview as needed, then redeploy so the value is included in the frontend build.
-6. Verify the Render health endpoint at `https://your-api.onrender.com/api/health` and test the Vercel site, product loading, quotes, checkout, and chatbot.
+- `client` (`client/`, Vite) serves the website and client-side routes.
+- `sunnova-api` (`server/`, Express) serves `/api/*`.
 
-Never commit `.env` or put `GEMINI_API_KEY` in a Vercel `VITE_*` variable. The Gemini key belongs only in the Render service environment. The API's local default remains `http://localhost:5173`; production origins are controlled by `CLIENT_URL`. The Render persistent disk preserves SQLite data, but it is not a database backup—configure and test backups before relying on production order data.
+The `/api/(.*)` rewrite is listed before the frontend catch-all. The browser uses same-origin `/api` URLs, so no service binding or frontend API URL variable is needed. The API calls Gemini externally; it does not call the frontend service.
 
-For the first deployment, Render generates the API URL and Vercel generates the site URL. Set `CLIENT_URL` and `VITE_API_URL` to those final origins in their respective dashboards and redeploy the frontend after setting its API URL.
+1. Push the repository to a Git provider, import the repository root into Vercel, and leave the project root at the repository root so Vercel reads the root `vercel.json`.
+2. In Vercel Project Settings → Environment Variables, set `GEMINI_API_KEY` for the environments where chat should be enabled. `GEMINI_MODEL` is optional and defaults in the API to `gemini-3.8-flash`.
+3. Deploy. Check `https://your-domain/api/health`, then test product loading, client-side navigation, quotes, checkout, and chat.
+4. For local multi-service routing, install/use Vercel CLI 47.0.5 or newer and run `npx vercel dev` from the repository root. The regular `npm run dev` remains available for separate local Vite and Express servers.
+
+**SQLite storage warning:** Vercel function filesystems are ephemeral and are not a durable place for the SQLite database. The products and other seed data are recreated when an instance starts, but orders, quotes, contacts, and stock changes can disappear or diverge between instances. Use this Vercel setup for a demo/test unless you migrate persistent application data to a managed database such as Turso/libSQL or Postgres. Do not use this deployment for real customer orders until persistence, backups, and inventory consistency are handled.
+
+Never commit `.env` or expose `GEMINI_API_KEY` in a `VITE_*` variable. Keep the key in Vercel's server-side environment variables only.
 
 ## API
 
@@ -63,7 +66,7 @@ The browser sends up to ten chat messages to the backend. The backend validates 
 - Brand imagery uses Unsplash URLs and can be replaced in `client/src/App.jsx` and the seed data.
 - The primary green and yellow theme is defined in `client/src/styles.css`.
 - Server options are in `.env`: `GEMINI_API_KEY`, `GEMINI_MODEL` (default `gemini-3.8-flash`), `PORT` (default `5000`), `CLIENT_URL` (default `http://localhost:5173`; comma-separated origins are supported) and optional `SOLAR_DATA_DIR` (defaults to `server/data`).
-- On Vercel, configure `VITE_API_URL` as the public Render API origin; leave it unset for local development, where Vite proxies `/api` to port 5000.
+- The frontend uses same-origin `/api` URLs. Local Vite development proxies `/api` to port 5000; Vercel routes `/api/*` to the `sunnova-api` service.
 
 ## Quality checks
 

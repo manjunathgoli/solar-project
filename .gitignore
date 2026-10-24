@@ -6,3 +6,4 @@ server/data/*.db
 !.env.example
 .vercel/
 .DS_Store
+.vercel
