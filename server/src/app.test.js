@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { createDatabase } from './db/database.js';
-import { createApp } from './app.js';
+import vercelApp, { createApp } from './app.js';
 
 let database;
 afterEach(() => { if (database?.open) database.close(); });
@@ -10,6 +10,10 @@ function app() {
   return createApp(database);
 }
 describe('API', () => {
+  it('exports the Express application as the Vercel service entrypoint', async () => {
+    expect((await request(vercelApp).get('/api/health')).status).toBe(200);
+  });
+
   it('lists seeded products with pagination', async () => {
     const response = await request(app()).get('/api/products?limit=2');
     expect(response.status).toBe(200);

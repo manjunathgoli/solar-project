@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import { db } from './db/database.js';
 import { createRouter } from './routes/api.js';
 import { errorHandler, notFound } from './middleware/errors.js';
 
@@ -33,3 +34,5 @@ export function createApp(database) {
   app.use(errorHandler);
   return app;
 }
+
+export default createApp(db);
